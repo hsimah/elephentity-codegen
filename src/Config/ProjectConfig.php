@@ -44,9 +44,9 @@ final readonly class ProjectConfig
 
         if (!is_file($path)) {
             throw new RuntimeException(sprintf(
-                'No %s in %s. It needs "spec" and a "targets" block.',
+                'No %s in "%s". It needs "spec" and a "targets" block.',
                 self::FILENAME,
-                $directory,
+                rtrim($directory, '/'),
             ));
         }
 

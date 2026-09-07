@@ -184,9 +184,14 @@ echo '{"elephentity":1,"irVersion":"1.0","target":"ts","config":{},
 It will fail on the empty schema, which is the point: you should be able to see exactly
 how, and the error should say what was missing.
 
-And the orchestrator itself, without a compiler:
+And the orchestrator itself, without a compiler. It needs a project — an `eleph.json`
+with a `targets` block — because that is what tells it which builders to run:
 
 ```bash
 echo '{"elephentity":1,"irVersion":"1.0","schema":{"entities":{}},"files":{}}' \
-  | eleph-codegen generate --project .
+  | eleph-codegen generate --project path/to/project
 ```
+
+An empty `entities` map is a valid schema, so this generates a project's whole tree as
+the spec having nothing in it — which is a quick way to see exactly which files a target
+owns, since every one of them is about to be swept.

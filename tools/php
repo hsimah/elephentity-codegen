@@ -46,8 +46,10 @@ fi
 # would be created root-owned and unwritable, and this works identically for podman.
 mkdir -p "$CACHE_DIR"
 
-# Interactive only when attached to a terminal, so CI and pipes still work.
-TTY_ARGS=()
+# stdin is always attached: a compiled spec arrives on it, so a container that could not
+# be piped into would make the documented by-hand invocations impossible. A TTY is added
+# only when there is one to attach, so CI and pipes still work.
+TTY_ARGS=(-i)
 if [ -t 0 ] && [ -t 1 ]; then
     TTY_ARGS=(-it)
 fi
