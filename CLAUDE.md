@@ -27,11 +27,13 @@ baseline exclusions.
 | read `eleph.json`'s `targets` block | read specs, or know what a spec is |
 | resolve a builder to an executable | fetch, pin, checksum or cache one |
 | run builders and pool their errors | generate code |
+| ask builders what they provide | know what an integration or a driver is |
 | sign, write and diff the tree | decode the IR, or understand an entity |
 
-The last row is the load-bearing one. The IR arrives encoded, is forwarded untouched, and
-is never decoded here. A change that adds a field to the IR needs a new compiler and a new
-builder and no release of this.
+The last row is the load-bearing one, and the fourth is the same rule applied twice. The
+IR arrives encoded, is forwarded untouched, and is never decoded here; a builder's
+`provides` is forwarded to the compiler the same way. A change that adds a field to
+either needs a new compiler and a new builder and no release of this.
 
 ## Conventions that are load bearing
 

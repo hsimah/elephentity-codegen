@@ -3,6 +3,7 @@
 
 declare(strict_types=1);
 
+use Eleph\Codegen\Command\DescribeCommand;
 use Eleph\Codegen\Command\DoctorCommand;
 use Eleph\Codegen\Command\GenerateCommand;
 use Eleph\Codegen\Command\TargetsCommand;
@@ -28,5 +29,6 @@ foreach ([__DIR__ . '/../vendor/autoload.php', __DIR__ . '/../../../autoload.php
 $application = new Application('eleph-codegen', '0.1.0');
 $application->add(new GenerateCommand());
 $application->add(new TargetsCommand());
+$application->add(new DescribeCommand());
 $application->add(new DoctorCommand());
 $application->run();

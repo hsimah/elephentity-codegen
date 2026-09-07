@@ -129,6 +129,36 @@ final class GenerateCommandTest extends TestCase
         self::assertFileExists($this->project . '/generated/notes.md');
     }
 
+    public function testATargetInsideAnothersDirectorySurvivesItsSweep(): void
+    {
+        // The WordPress manifests are PHP, loaded by the PHP runtime, and belong in the
+        // PHP tree — but the PHP builder cannot produce them, so they come from a target
+        // of their own writing inside its directory. Both own "php", so without the
+        // reservation the outer sweep takes the inner target's files every run.
+        $this->writeConfig(nested: 'wordpress');
+
+        $this->generate();
+
+        self::assertFileExists($this->project . '/generated/Post.php');
+        self::assertFileExists($this->project . '/generated/wordpress/Post.php');
+
+        $this->generate();
+
+        self::assertFileExists($this->project . '/generated/wordpress/Post.php');
+    }
+
+    public function testNarrowingWithTargetsCannotSweepTheTargetItLeftOut(): void
+    {
+        // The reservation is computed from every configured target, not the selected
+        // ones — otherwise --targets becomes the way to delete the other tree.
+        $this->writeConfig(nested: 'wordpress');
+        $this->generate();
+
+        $this->generate(['--targets', 'php']);
+
+        self::assertFileExists($this->project . '/generated/wordpress/Post.php');
+    }
+
     public function testCheckWritesNothingAtAll(): void
     {
         $result = $this->generate(['--check']);
@@ -278,11 +308,17 @@ final class GenerateCommandTest extends TestCase
         chmod($path, 0o775);
     }
 
-    private function writeConfig(string $builder = 'eleph-gen-fixture'): void
+    private function writeConfig(string $builder = 'eleph-gen-fixture', ?string $nested = null): void
     {
+        $targets = ['php' => ['output' => 'generated', 'builder' => $builder]];
+
+        if (null !== $nested) {
+            $targets[$nested] = ['output' => 'generated/' . $nested, 'builder' => $builder];
+        }
+
         file_put_contents($this->project . '/eleph.json', (string) json_encode([
             'spec' => 'spec',
-            'targets' => ['php' => ['output' => 'generated', 'builder' => $builder]],
+            'targets' => $targets,
         ], JSON_PRETTY_PRINT));
     }
 

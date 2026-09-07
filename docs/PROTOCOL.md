@@ -18,6 +18,21 @@ Nothing in the middle understands the IR. It arrives encoded, is forwarded to ea
 builder unchanged, and is never decoded here — which is why adding a field to the IR
 needs a new compiler and a new builder, and no release of this program at all.
 
+## Two things a builder is asked
+
+Every exchange carries a `request` field saying which:
+
+| `request` | Asked | Answers |
+|---|---|---|
+| `describe` | before a spec is compiled | what this builder provides |
+| `generate` | after | the files |
+
+`request` is optional and absent means `generate`, so the shape below is what it always
+was. **A builder must answer both.** Describe exists because the compiler cannot
+validate `integrations: { wpgraphql: { singular: … } }` until it knows what keys
+`wpgraphql` accepts, and the package that owns that answer is the one that also
+generates the GraphQL manifest — so it is asked first and the spec is compiled second.
+
 ## Three rules for a builder
 
 1. **Read one JSON object from stdin. Write one JSON object to stdout. Exit 0.**
@@ -30,12 +45,49 @@ needs a new compiler and a new builder, and no release of this program at all.
 
 Exit non-zero to fail the build; whatever you wrote to stderr is shown to the user.
 
+## The describe request
+
+```json
+{ "elephentity": 1, "irVersion": "1.0", "request": "describe", "target": "ts" }
+```
+
+No schema and no config: a description is what the compiler needs in order to compile,
+so it has to be answerable before a spec has been read.
+
+## The describe response
+
+```json
+{
+  "elephentity": 1,
+  "irVersion": "1.0",
+  "provides": {
+    "integrations": {
+      "wpgraphql": {
+        "description": "Exposes entities through WPGraphQL.",
+        "entityConfig": { "singular": { "type": "string" } }
+      }
+    },
+    "drivers": ["wordpress"]
+  }
+}
+```
+
+`provides` is **opaque to this program**. It is forwarded to the compiler exactly as
+the IR is forwarded to you, and for the same reason: the compiler is the only thing
+that knows what an integration is, so a builder that starts providing a new kind of
+thing needs a new compiler and no release of `eleph-codegen`. What the keys above mean
+is Elephentity's business — see its own docs.
+
+A builder that provides neither returns `"provides": {}`. That is an answer, not a
+failure: a language generator is expected to provide nothing.
+
 ## The builder request
 
 ```json
 {
   "elephentity": 1,
   "irVersion": "1.0",
+  "request": "generate",
   "target": "ts",
   "config": { "style": "esm" },
   "outputDirectory": "web/generated",
@@ -50,6 +102,7 @@ payload.
 
 - `elephentity` — protocol version. Currently `1`.
 - `irVersion` — the IR's version, which moves independently of the protocol's.
+- `request` — `generate`. Absent means the same.
 - `target` — the key this target is configured under.
 - `config` — your target's block from `eleph.json`, minus nothing. Nothing upstream
   knows what your settings mean; validate them yourself and report problems in `errors`.
@@ -160,6 +213,13 @@ refuses it when it loads.
 
 Every target needs **its own output directory**. Two targets sharing one is refused,
 because generating either would delete the other's files.
+
+One target's directory **may sit inside another's**, and the sweep respects it. That is
+how a driver's manifests reach the tree they belong to: they are PHP, loaded by the PHP
+runtime, and the PHP builder cannot produce them — so they come from a target of their
+own writing to `generated/wordpress`. The exclusion is computed from every configured
+target rather than the ones a run selected, so narrowing with `--targets` cannot delete
+the tree it left out.
 
 **Builders are resolved, never fetched.** Three places, in order:
 

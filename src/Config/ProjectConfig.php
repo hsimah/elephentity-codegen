@@ -23,6 +23,11 @@ use RuntimeException;
  * schema no longer produces, so a directory two targets write into is one where
  * generating a single target deletes the other's work. Refusing it here is what makes
  * `--targets` safe to narrow with.
+ *
+ * Nesting is a different matter and is allowed: a target may write inside another's
+ * directory, because a driver's manifests are PHP that belongs in the PHP tree even
+ * though the PHP builder cannot produce them. What makes that safe is `reservedIn()`,
+ * which tells each target's sweep to leave the others alone.
  */
 final readonly class ProjectConfig
 {
@@ -179,5 +184,45 @@ final readonly class ProjectConfig
         }
 
         return array_filter($byDirectory, static fn (array $sharing) => count($sharing) > 1);
+    }
+
+    /**
+     * The directories other targets own inside this one's, relative to it.
+     *
+     * Answered from every configured target rather than the ones a run selected: a
+     * sweep narrowed with `--targets` must still respect a directory it is not
+     * generating, or narrowing becomes the way to delete the target you left out.
+     *
+     * Compared on a path-segment boundary, so `generated` contains `generated/wordpress`
+     * and does not contain `generated-wordpress`, which is a different directory that
+     * merely starts with the same letters.
+     *
+     * @return list<string>
+     */
+    public function reservedIn(string $target): array
+    {
+        $owner = $this->targets[$target] ?? null;
+
+        if (null === $owner) {
+            return [];
+        }
+
+        $outer = rtrim($owner->outputDirectory, '/');
+
+        $reserved = [];
+
+        foreach ($this->targets as $name => $candidate) {
+            if ($name === $target) {
+                continue;
+            }
+
+            $inner = rtrim($candidate->outputDirectory, '/');
+
+            if (str_starts_with($inner, $outer . '/')) {
+                $reserved[] = substr($inner, strlen($outer) + 1);
+            }
+        }
+
+        return $reserved;
     }
 }
