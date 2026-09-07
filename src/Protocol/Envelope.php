@@ -52,6 +52,20 @@ final readonly class Envelope
     public const IR_VERSION = '1.0';
 
     /**
+     * The two things a builder can be asked for.
+     *
+     * A discriminator rather than a second wire format, because everything else about
+     * the exchange is identical: one JSON object in, one JSON object out, versions
+     * outside the payload. `request` is optional and absent means `generate`, so a
+     * builder written before describe existed still answers a generate request exactly
+     * as it did — which is what "the envelope may gain optional fields and nothing
+     * else" was reserving room for.
+     */
+    public const REQUEST_GENERATE = 'generate';
+
+    public const REQUEST_DESCRIBE = 'describe';
+
+    /**
      * Wrap an already-encoded IR for one target.
      *
      * The schema arrives encoded and leaves untouched. Nothing between the compiler and
@@ -67,11 +81,59 @@ final readonly class Envelope
         return [
             'elephentity' => self::VERSION,
             'irVersion' => self::IR_VERSION,
+            'request' => self::REQUEST_GENERATE,
             'target' => $target,
             'config' => (object) $request->config,
             'outputDirectory' => $request->outputDirectory,
             'schema' => $schema,
         ];
+    }
+
+    /**
+     * Ask a builder what it provides, before there is anything to generate.
+     *
+     * Deliberately carries no schema and no config. A description is what the compiler
+     * needs in order to *compile* — which integrations a spec may name, which drivers
+     * are installed — so it has to be answerable before a spec has been read, and a
+     * builder that needed the IR to answer would have made it unanswerable.
+     *
+     * @return array<string, mixed>
+     */
+    public static function encodeDescribeRequest(string $target): array
+    {
+        return [
+            'elephentity' => self::VERSION,
+            'irVersion' => self::IR_VERSION,
+            'request' => self::REQUEST_DESCRIBE,
+            'target' => $target,
+        ];
+    }
+
+    /**
+     * What a builder said it provides, carried and never read.
+     *
+     * The same discipline as the IR, for the same reason: this program forwards
+     * `provides` to the compiler without knowing what an integration is, so a new kind
+     * of thing a builder can provide needs a new compiler and a new builder and no
+     * release of this. Validated only far enough to be sure it is an object — a
+     * malformed one has to fail here rather than as a confusing error two hops later.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, mixed>
+     */
+    public static function decodeDescription(array $data): array
+    {
+        self::assertVersions($data);
+
+        $provides = $data['provides'] ?? [];
+
+        if (!is_array($provides)) {
+            throw new ProtocolException('"provides" must be an object.');
+        }
+
+        /** @var array<string, mixed> $provides */
+        return $provides;
     }
 
     /**

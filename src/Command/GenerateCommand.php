@@ -100,7 +100,7 @@ final class GenerateCommand extends Command
         }
 
         $errors = [];
-        /** @var array<string, array{directory: string, files: list<GeneratedFile>, signer: Signer, extensions: list<string>}> $plan */
+        /** @var array<string, array{directory: string, files: list<GeneratedFile>, signer: Signer, extensions: list<string>, reserved: list<string>}> $plan */
         $plan = [];
 
         $builders = new Builders($root, $config->buildersDirectory);
@@ -142,6 +142,7 @@ final class GenerateCommand extends Command
                 'files' => $files,
                 'signer' => new Signer($response->headerStyle),
                 'extensions' => $response->extensions,
+                'reserved' => $config->reservedIn($name),
             ];
         }
 
@@ -158,7 +159,12 @@ final class GenerateCommand extends Command
         $reports = [];
 
         foreach ($plan as $name => $step) {
-            $writer = new Writer($step['directory'], $step['signer'], $step['extensions']);
+            $writer = new Writer(
+                $step['directory'],
+                $step['signer'],
+                $step['extensions'],
+                $step['reserved'],
+            );
             $reports[$name] = $check ? $writer->check($step['files']) : $writer->write($step['files']);
         }
 
@@ -285,7 +291,7 @@ final class GenerateCommand extends Command
 
     /**
      * @param array<string, WriteReport>                                                                                     $reports
-     * @param array<string, array{directory: string, files: list<GeneratedFile>, signer: Signer, extensions: list<string>}> $plan
+     * @param array<string, array{directory: string, files: list<GeneratedFile>, signer: Signer, extensions: list<string>, reserved: list<string>}> $plan
      */
     private function reportWrite(SymfonyStyle $io, array $reports, array $plan): int
     {

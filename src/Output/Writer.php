@@ -25,11 +25,13 @@ final readonly class Writer
 {
     /**
      * @param list<string> $ownedExtensions Extensions this target may delete, no dot.
+     * @param list<string> $reserved        Subdirectories another target owns, relative to this one.
      */
     public function __construct(
         private string $outputDirectory,
         private Signer $signer = new Signer(),
         private array $ownedExtensions = ['php'],
+        private array $reserved = [],
     ) {
     }
 
@@ -109,6 +111,13 @@ final readonly class Writer
      * turns a mistyped `output` into data loss, and deleting is the one thing worth
      * being timid about.
      *
+     * Restricted again to what no other target owns. A target may write inside another's
+     * directory — the WordPress manifests are PHP, loaded by the PHP runtime, and belong
+     * in the PHP tree even though the PHP builder cannot produce them — and without this
+     * the outer target would sweep the inner one's files on every run, since they share
+     * an extension. The exclusions come from every *configured* target rather than the
+     * ones this run selected, so narrowing with `--targets` cannot reintroduce it.
+     *
      * @param array<string, true> $expected
      *
      * @return list<string>
@@ -133,7 +142,7 @@ final readonly class Writer
 
             $relative = substr($entry->getPathname(), $prefix);
 
-            if (!isset($expected[$relative])) {
+            if (!isset($expected[$relative]) && !$this->isReserved($relative)) {
                 $stale[] = $relative;
             }
         }
@@ -141,6 +150,24 @@ final readonly class Writer
         sort($stale);
 
         return $stale;
+    }
+
+    /**
+     * Whether a path belongs to a target that writes inside this one's directory.
+     *
+     * Matched on a path-segment boundary, so `wordpress` reserves `wordpress/manifest.php`
+     * and not `wordpress-notes.php`, which is a different file that merely starts the
+     * same way.
+     */
+    private function isReserved(string $relative): bool
+    {
+        foreach ($this->reserved as $directory) {
+            if (str_starts_with($relative, trim($directory, '/') . '/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function put(string $absolute, string $contents): void
