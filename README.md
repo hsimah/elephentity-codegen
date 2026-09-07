@@ -1,6 +1,6 @@
 # elephentity-codegen
 
-The code generator for [Elephentity](https://github.com/hsimah/elephentity).
+The code generator for [Elephentity](https://github.com/hsimah-services/elephentity).
 
 Elephentity compiles human-readable specs into an IR. This program takes it from there:
 it resolves the language builders a project has configured, runs each one, and signs and
