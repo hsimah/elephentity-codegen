@@ -48,7 +48,7 @@ Exit non-zero to fail the build; whatever you wrote to stderr is shown to the us
 ## The describe request
 
 ```json
-{ "elephentity": 1, "irVersion": "1.0", "request": "describe", "target": "ts" }
+{ "elephentity": 1, "irVersion": "1.1", "request": "describe", "target": "ts" }
 ```
 
 No schema and no config: a description is what the compiler needs in order to compile,
@@ -59,7 +59,7 @@ so it has to be answerable before a spec has been read.
 ```json
 {
   "elephentity": 1,
-  "irVersion": "1.0",
+  "irVersion": "1.1",
   "provides": {
     "integrations": {
       "wpgraphql": {
@@ -86,7 +86,7 @@ failure: a language generator is expected to provide nothing.
 ```json
 {
   "elephentity": 1,
-  "irVersion": "1.0",
+  "irVersion": "1.1",
   "request": "generate",
   "target": "ts",
   "config": { "style": "esm" },
@@ -115,7 +115,7 @@ payload.
 ```json
 {
   "elephentity": 1,
-  "irVersion": "1.0",
+  "irVersion": "1.1",
   "headerStyle": "line-comment",
   "extensions": ["ts"],
   "files": [{ "path": "post/Post.ts", "body": "export interface Post {}\n" }],
@@ -142,7 +142,7 @@ The upstream half, for anyone writing a compiler rather than a builder. It arriv
 ```json
 {
   "elephentity": 1,
-  "irVersion": "1.0",
+  "irVersion": "1.1",
   "schema": { },
   "files": { "php": [{ "path": "storage-manifest.php", "body": "return [];\n" }] }
 }
@@ -170,8 +170,8 @@ better.
 Declare exactly the versions you support and reject the rest:
 
 ```js
-if (request.elephentity !== 1 || request.irVersion !== "1.0") {
-  process.stderr.write(`eleph-gen-ts speaks IR 1.0, got ${request.irVersion}\n`);
+if (request.elephentity !== 1 || request.irVersion !== "1.1") {
+  process.stderr.write(`eleph-gen-ts speaks IR 1.1, got ${request.irVersion}\n`);
   process.exit(1);
 }
 ```
@@ -237,7 +237,7 @@ common failure, and `eleph-codegen doctor` exists to say so.
 A builder is just a program, so you can drive it without any of this:
 
 ```bash
-echo '{"elephentity":1,"irVersion":"1.0","target":"ts","config":{},
+echo '{"elephentity":1,"irVersion":"1.1","target":"ts","config":{},
        "outputDirectory":"out","schema":{}}' | ./tools/builders/eleph-gen-ts
 ```
 
@@ -248,7 +248,7 @@ And the orchestrator itself, without a compiler. It needs a project — an `elep
 with a `targets` block — because that is what tells it which builders to run:
 
 ```bash
-echo '{"elephentity":1,"irVersion":"1.0","schema":{"entities":{}},"files":{}}' \
+echo '{"elephentity":1,"irVersion":"1.1","schema":{"entities":{}},"files":{}}' \
   | eleph-codegen generate --project path/to/project
 ```
 
